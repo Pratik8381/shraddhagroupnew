@@ -539,23 +539,14 @@ dd {
 .brand {
   display: flex;
   align-items: center;
-  gap: 14px;
-  padding: 18px 16px;
-  min-height: 90px;
+  justify-content: center;
+  padding: 18px 12px;
+  min-height: 100px;
 }
 
 .brand img {
-  width: 76px;
-  height: 76px;
-  min-width: 76px;
+  width: 80px;
+  height: 80px;
   object-fit: contain;
-  flex-shrink: 0;
-}
-
-.brand small {
   display: block;
-  font-size: 12px;
-  line-height: 1.5;
-  color: var(--muted);
-  margin-top: 5px;
 }
