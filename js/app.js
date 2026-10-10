@@ -52,9 +52,12 @@ function layout() {
     <button class="btn" id="logout">Logout</button>
   `;
 
-  $('#close-menu').onclick=()=>$('#sidebar').classList.remove('open');
-  $('#main').addEventListener('click',()=>$('#sidebar').classList.remove('open')); // also close when tapping the page
-
+  const side = $('#sidebar');
+  document.addEventListener('click', e => {
+    if (e.target.closest('#menu')) side.classList.toggle('open');             // ☰ opens or closes
+    else if (e.target.closest('#close-menu')) side.classList.remove('open');  // ✕ closes
+    else if (side.classList.contains('open') && !e.target.closest('#sidebar')) side.classList.remove('open'); // tapping outside closes
+  });
   $('#logout').onclick = async () => {
     await sb.auth.signOut();
     location.href = 'login.html';
