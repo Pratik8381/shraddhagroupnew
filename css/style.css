@@ -535,3 +535,27 @@ dd {
 .nl-wrap {
   display: none !important;
 }
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 18px 16px;
+  min-height: 90px;
+}
+
+.brand img {
+  width: 76px;
+  height: 76px;
+  min-width: 76px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.brand small {
+  display: block;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--muted);
+  margin-top: 5px;
+}

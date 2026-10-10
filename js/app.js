@@ -26,18 +26,8 @@ function layout() {
 
   $('#sidebar').innerHTML = `
   <div class="brand">
-  <img
-    src="images/mandal-logo.png"
-    alt="Ganesh Mandal Logo"
-    style="
-      width: 42px;
-      height: 42px;
-      object-fit: contain;
-      vertical-align: middle;
-      margin-right: 8px;
-    "
-  >
-  
+  <img src="images/mandal-logo.png" alt="Ganesh Mandal Logo">
+  <small>Contribution Management</small>
 </div>
     <nav class="nav" aria-label="Main">
       ${NAV.map(n => `
