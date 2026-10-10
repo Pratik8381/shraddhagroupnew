@@ -245,7 +245,7 @@
  
    y = sectionTitle(
      doc,
-     '3. REGISTER OF CONTRIBUTIONS',
+     '2. REGISTER OF CONTRIBUTIONS',
      y,
      C.ok
    ) + 2;
@@ -329,7 +329,7 @@
  
    y = sectionTitle(
      doc,
-     '4. REGISTER OF EXPENDITURE',
+     '3. REGISTER OF EXPENDITURE',
      y,
      C.pri
    ) + 2;
@@ -398,7 +398,7 @@
  
    y = sectionTitle(
      doc,
-     '6. FINAL STATEMENT',
+     '4. FINAL STATEMENT',
      y,
      C.pri
    ) + 2;
