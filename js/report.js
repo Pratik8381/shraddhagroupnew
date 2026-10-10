@@ -43,7 +43,7 @@ async function makePdf() {
     doc.addImage(logo.data, 'PNG', 15, 7, w, h);
   }
   doc.setTextColor(255, 255, 255); doc.setFont(undefined, 'bold'); doc.setFontSize(20);
-  doc.text('GANESH MANDAL', W - 14, 19, { align: 'right' });
+  doc.text('SHRADDHA GROUP', W - 14, 19, { align: 'right' });
   doc.setFont(undefined, 'normal'); doc.setFontSize(10.5);
   doc.text('Contribution & Expense Report', W - 14, 27, { align: 'right' });
   doc.setFontSize(8.5); doc.text('Generated on ' + fdate(today()), W - 14, 34, { align: 'right' });
