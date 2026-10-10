@@ -39,7 +39,7 @@ function layout() {
         </a>
       `).join('')}
     </nav>
-    <div class="side-foot">© ${new Date().getFullYear()} Ganesh Mandal<br>Created by Pratik Patil<br>All rights reserved</div>  `;
+    <div class="side-foot">© ${new Date().getFullYear()}<br>Created by Pratik Patil</div>  `;
 
   $('#topbar').innerHTML = `
     <button class="btn menu-btn" aria-label="Menu" id="menu">☰</button>
