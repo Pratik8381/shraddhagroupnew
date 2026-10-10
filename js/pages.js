@@ -12,7 +12,7 @@ PAGES.dashboard=()=>{
   const t=totals(),cs=DB.list('contributions'),ex=DB.list('expenses'),pct=t.expected?Math.round(t.mandPaid/t.expected*100):0;
   const recent=[...cs.map(c=>({date:c.date,kind:'Income',d:`${mname(c.memberId)} · ${c.type}`,a:c.amount})),...ex.map(e=>({date:e.date,kind:'Expense',d:e.description,a:e.amount}))].sort((a,b)=>b.date.localeCompare(a.date)).slice(0,8);
   const pend=mandatoryRows().filter(r=>r.pending>0).sort((a,b)=>b.pending-a.pending).slice(0,8);
-  main().innerHTML=head('Ganesh Mandal Dashboard','Contributions, expenses and pending payments','<a class="btn primary" href="add-contribution.html">+ Add Contribution</a><a class="btn" href="expenses.html">+ Add Expense</a>')+
+  main().innerHTML=head('Dashboard','Contributions, expenses and pending payments','<a class="btn primary" href="add-contribution.html">+ Add Contribution</a><a class="btn" href="expenses.html">+ Add Expense</a>')+
   `<div class="grid g4">${card('Total Members',t.members)}${card('Contributions Collected',fmt(t.collected),'up')}${card('Mandatory Expected',fmt(t.expected))}${card('Pending Contributions',fmt(t.pending),'down')}${card('Total Expenses',fmt(t.expenses),'down')}${card('Available Balance',fmt(t.balance),'hero '+(t.balance<0?'down':''),'Contributions − Expenses')}</div>
   <div class="card" style="margin-bottom:16px"><h3>Mandatory collection: ${pct}%</h3>${bar(pct)}<p class="d" style="color:var(--muted);font-size:13px">${fmt(t.mandPaid)} received of ${fmt(t.expected)} expected</p></div>
   <div class="grid g2"><div class="card"><h3>Income vs Expense</h3><div class="chartbox"><canvas id="c1"></canvas></div></div><div class="card"><h3>Expenses by Category</h3><div class="chartbox"><canvas id="c2"></canvas></div></div></div>
