@@ -25,16 +25,65 @@ PAGES.dashboard=()=>{
 };
 /* ---------- Members ---------- */
 const shrink=f=>new Promise(ok=>{const i=new Image();i.onload=()=>{const c=document.createElement('canvas');c.width=c.height=96;const s=Math.min(i.width,i.height);c.getContext('2d').drawImage(i,(i.width-s)/2,(i.height-s)/2,s,s,0,0,96,96);ok(c.toDataURL('image/jpeg',.75))};i.src=URL.createObjectURL(f)});
-function memberForm(m,done){
-  const e=!!m;m=m||{};let photo=m.photo||'';
-  const o=modal(e?'Edit Member':'Add Member',field('Name *','name',`<input id="name" value="${esc(m.name)}">`)+field('Mobile Number *','mobile',`<input id="mobile" inputmode="numeric" maxlength="10" value="${esc(m.mobile)}">`)+`<div class="f"><label for="photo">Photo (optional)</label><div style="display:flex;align-items:center"><span id="prev">${avatar({name:m.name,photo})}</span><input type="file" id="photo" accept="image/*"></div></div>`,{onSave(r){
-    const name=$('#name',r).value.trim(),mob=$('#mobile',r).value.trim(),er={};
-    if(!name)er.name='Name is required';if(!mob)er.mobile='Mobile number is required';else if(!/^[6-9]\d{9}$/.test(mob))er.mobile='Enter a valid 10-digit mobile number';
-    else if(DB.list('members').some(x=>x.mobile===mob&&x.id!==m.id))er.mobile='This mobile number already exists';
-    if(!showErrors(r,er))return false;
-    const d={name,mobile:mob,photo};e?DB.update('members',m.id,d):DB.add('members',d);toast(e?'Member updated successfully':'Member added successfully');done()}});
-  $('#photo',o).onchange=async ev=>{const f=ev.target.files[0];if(f){photo=await shrink(f);$('#prev',o).innerHTML=avatar({photo})}};
+
+function memberForm(m, done) {
+  const e = !!m;
+  m = m || {};
+
+  const o = modal(
+    e ? 'Edit Member' : 'Add Member',
+    field(
+      'Name *',
+      'name',
+      `<input id="name" value="${esc(m.name)}">`
+    ) +
+    field(
+      'Mobile Number *',
+      'mobile',
+      `<input id="mobile" inputmode="numeric" maxlength="10" value="${esc(m.mobile)}">`
+    ),
+    {
+      onSave(r) {
+        const name = $('#name', r).value.trim();
+        const mob = $('#mobile', r).value.trim();
+        const er = {};
+
+        if (!name) er.name = 'Name is required';
+
+        if (!mob) {
+          er.mobile = 'Mobile number is required';
+        } else if (!/^[6-9]\d{9}$/.test(mob)) {
+          er.mobile = 'Enter a valid 10-digit mobile number';
+        } else if (
+          DB.list('members').some(
+            x => x.mobile === mob && x.id !== m.id
+          )
+        ) {
+          er.mobile = 'This mobile number already exists';
+        }
+
+        if (!showErrors(r, er)) return false;
+
+        const d = {
+          name,
+          mobile: mob,
+          photo: m.photo || ''
+        };
+
+        e
+          ? DB.update('members', m.id, d)
+          : DB.add('members', d);
+
+        toast(
+          e ? 'Member updated successfully' : 'Member added successfully'
+        );
+
+        done();
+      }
+    }
+  );
 }
+
 PAGES.members=()=>{
   main().innerHTML=head('Members','Add and manage Mandal members','<button class="btn primary" id="add">+ Add Member</button>')+`<div class="card"><div class="filters"><input id="q" type="search" placeholder="Search by name or mobile…" aria-label="Search members"></div><div class="tbl" id="list"></div></div>`;
   const draw=()=>{const q=$('#q').value.toLowerCase(),all=DB.list('members'),l=all.filter(m=>m.name.toLowerCase().includes(q)||m.mobile.includes(q)),cs=DB.list('contributions');
