@@ -25,10 +25,20 @@ function layout() {
   const page = document.body.dataset.page;
 
   $('#sidebar').innerHTML = `
-    <div class="brand">
-      <b>🕉 GANESH MANDAL</b>
-      <small>Contribution Management</small>
-    </div>
+  <div class="brand">
+  <img
+    src="images/mandal-logo.png"
+    alt="Ganesh Mandal Logo"
+    style="
+      width: 42px;
+      height: 42px;
+      object-fit: contain;
+      vertical-align: middle;
+      margin-right: 8px;
+    "
+  >
+  <small>Contribution Management</small>
+</div>
     <nav class="nav" aria-label="Main">
       ${NAV.map(n => `
         <a href="${n[0]}" class="${n[2] === page ? 'active' : ''}">
