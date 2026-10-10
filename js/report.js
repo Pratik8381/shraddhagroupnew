@@ -455,41 +455,41 @@
    y += declarationLines.length * 4 + 19;
  
    // Move signatures to a new page if necessary.
-   if (y + 18 > 274) {
-     doc.addPage();
-     y = 35;
-   }
+  //  if (y + 18 > 274) {
+  //    doc.addPage();
+  //    y = 35;
+  //  }
  
-   const sigGap = 6;
-   const sigW = (W - 28 - sigGap * 2) / 3;
+  //  const sigGap = 6;
+  //  const sigW = (W - 28 - sigGap * 2) / 3;
  
-   const signatories = [
-     'Prepared By',
-     'Verified By',
-     'Authorized Signatory'
-   ];
+  //  const signatories = [
+  //    'Prepared By',
+  //    'Verified By',
+  //    'Authorized Signatory'
+  //  ];
  
-   signatories.forEach((label, i) => {
-     const x = 14 + i * (sigW + sigGap);
+  //  signatories.forEach((label, i) => {
+  //    const x = 14 + i * (sigW + sigGap);
  
-     doc.setDrawColor(100, 100, 100);
-     doc.setLineWidth(0.25);
-     doc.line(x, y, x + sigW, y);
+  //    doc.setDrawColor(100, 100, 100);
+  //    doc.setLineWidth(0.25);
+  //    doc.line(x, y, x + sigW, y);
  
-     doc.setFont('helvetica', 'bold');
-     doc.setFontSize(8);
-     doc.setTextColor(...C.ink);
+  //    doc.setFont('helvetica', 'bold');
+  //    doc.setFontSize(8);
+  //    doc.setTextColor(...C.ink);
  
-     doc.text(label, x + sigW / 2, y + 5, {
-       align: 'center'
-     });
+  //    doc.text(label, x + sigW / 2, y + 5, {
+  //      align: 'center'
+  //    });
  
-     doc.setFont('helvetica', 'normal');
-     doc.setFontSize(7.5);
-     doc.setTextColor(...C.mut);
+  //    doc.setFont('helvetica', 'normal');
+  //    doc.setFontSize(7.5);
+  //    doc.setTextColor(...C.mut);
  
-     doc.text('Name: __________________', x, y + 12);
-   });
+  //    doc.text('Name: __________________', x, y + 12);
+  //  });
  
    // ===== Page Headers and Footers =====
    const pageCount = doc.getNumberOfPages();
