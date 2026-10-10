@@ -37,7 +37,7 @@ function layout() {
       margin-right: 8px;
     "
   >
-  <small>Contribution Management</small>
+  
 </div>
     <nav class="nav" aria-label="Main">
       ${NAV.map(n => `
