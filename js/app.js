@@ -30,7 +30,7 @@ function layout() {
   <img
     src="images/mandal-logo.png"
     alt="Ganesh Mandal Logo"
-  >
+  ><button class="btn close-btn" id="close-menu" aria-label="Close menu">✕</button>
 </div>
     <nav class="nav" aria-label="Main">
       ${NAV.map(n => `
@@ -52,8 +52,8 @@ function layout() {
     <button class="btn" id="logout">Logout</button>
   `;
 
-  $('#menu').onclick = () =>
-    $('#sidebar').classList.toggle('open');
+  $('#close-menu').onclick=()=>$('#sidebar').classList.remove('open');
+  $('#main').addEventListener('click',()=>$('#sidebar').classList.remove('open')); // also close when tapping the page
 
   $('#logout').onclick = async () => {
     await sb.auth.signOut();

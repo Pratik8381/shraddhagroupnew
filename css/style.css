@@ -550,3 +550,18 @@ dd {
   object-fit: contain;
   display: block;
 }
+.brand {
+  position: relative;
+}
+.close-btn {
+  display: none;
+  position: absolute;
+  top: 14px;
+  right: 12px;
+  padding: 6px 11px;
+}
+@media (max-width: 900px) {
+  .close-btn {
+    display: inline-block;
+  }
+}
