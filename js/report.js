@@ -322,67 +322,14 @@
  
    y = doc.lastAutoTable.finalY + 12;
  
-   // ===== Expense Category Summary =====
-   const byCat = {};
- 
-   ex.forEach(e => {
-     const category = e.category || 'Uncategorized';
- 
-     byCat[category] =
-       (byCat[category] || 0) + Number(e.amount || 0);
-   });
- 
-   const cats = Object.entries(byCat)
-     .sort((a, b) => b[1] - a[1]);
- 
-   if (cats.length) {
-     need(25);
- 
-     y = sectionTitle(
-       doc,
-       '4. EXPENDITURE BY CATEGORY',
-       y,
-       C.pri
-     ) + 2;
- 
-     doc.autoTable({
-       ...formalTableStyles,
-       startY: y,
- 
-       head: [[
-         'Sr. No.',
-         'Expense Category',
-         'Amount (Rs.)'
-       ]],
- 
-       body: cats.map(([name, amount], i) => [
-         i + 1,
-         String(name),
-         rs(amount)
-       ]),
- 
-       foot: [[
-         '',
-         'TOTAL EXPENDITURE',
-         rs(sum(ex))
-       ]],
- 
-       columnStyles: {
-         0: { cellWidth: 18, halign: 'center' },
-         1: { cellWidth: 100 },
-         2: { halign: 'right' }
-       }
-     });
- 
-     y = doc.lastAutoTable.finalY + 12;
-   }
+   
  
    // ===== Detailed Expenses =====
    need(30);
  
    y = sectionTitle(
      doc,
-     '5. REGISTER OF EXPENDITURE',
+     '4. REGISTER OF EXPENDITURE',
      y,
      C.pri
    ) + 2;
