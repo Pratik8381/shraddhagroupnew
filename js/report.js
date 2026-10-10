@@ -239,55 +239,7 @@
  
    y = doc.lastAutoTable.finalY + 12;
  
-   // ===== Top Contributors =====
-   const byMember = {};
- 
-   cs.forEach(c => {
-     const id = c.memberId;
-     byMember[id] =
-       (byMember[id] || 0) + Number(c.amount || 0);
-   });
- 
-   const top = Object.entries(byMember)
-     .sort((a, b) => b[1] - a[1])
-     .slice(0, 5);
- 
-   if (top.length) {
-     need(25 + top.length * 7);
- 
-     y = sectionTitle(
-       doc,
-       '2. CONTRIBUTION SUMMARY',
-       y,
-       C.pri
-     ) + 2;
- 
-     doc.autoTable({
-       ...formalTableStyles,
-       startY: y,
- 
-       head: [[
-         'Sr. No.',
-         'Contributor Name',
-         'Contribution Amount (Rs.)'
-       ]],
- 
-       body: top.map(([id, amount], i) => [
-         i + 1,
-         String(mname(id) || 'Unknown'),
-         rs(amount)
-       ]),
- 
-       columnStyles: {
-         0: { cellWidth: 18, halign: 'center' },
-         1: { cellWidth: 95 },
-         2: { halign: 'right' }
-       }
-     });
- 
-     y = doc.lastAutoTable.finalY + 12;
-   }
- 
+
    // ===== Detailed Contributions =====
    need(30);
  
