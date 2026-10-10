@@ -565,3 +565,7 @@ dd {
     display: inline-block;
   }
 }
+.side-foot {
+  text-align: center;
+  font-weight: 600;
+}

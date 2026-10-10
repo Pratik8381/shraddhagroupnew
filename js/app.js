@@ -39,6 +39,7 @@ function layout() {
         </a>
       `).join('')}
     </nav>
+    <div class="side-foot">Created by Pratik Patil</div>
   `;
 
   $('#topbar').innerHTML = `
