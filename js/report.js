@@ -1,156 +1,707 @@
-const rs = n => 'Rs. ' + new Intl.NumberFormat('en-IN').format(n || 0); // jsPDF can't print the ₹ symbol
-const C = { pri:[249,115,22], sec:[153,27,27], gold:[234,179,8], ok:[22,163,74], bad:[220,38,38], man:[91,33,182], ink:[30,41,59], mut:[100,116,139], soft:[255,247,237], track:[226,232,240] };
 
-const loadLogo = () => new Promise(ok => {
-  const i = new Image();
-  i.onload = () => { const c = document.createElement('canvas'); c.width = i.width; c.height = i.height; c.getContext('2d').drawImage(i, 0, 0); ok({ data: c.toDataURL('image/png'), w: i.width, h: i.height }); };
-  i.onerror = () => ok(null);
-  i.src = 'images/mandal-logo.png';
-});
+/* =========================================================
+   GANESH MANDAL — FORMAL FINANCIAL REPORT
+   Print-friendly PDF with tables, summary and signatures
+   Requires jsPDF and jsPDF-AutoTable
+   ========================================================= */
 
-const sectionTitle = (doc, text, y, col) => {
-  doc.setFillColor(...col); doc.roundedRect(14, y - 5, 3, 7, 1, 1, 'F');
-  doc.setFont(undefined, 'bold'); doc.setFontSize(13); doc.setTextColor(...C.ink); doc.text(text, 20, y);
-  doc.setFont(undefined, 'normal'); return y + 4;
-};
-const statBox = (doc, x, y, w, label, value, col) => {
-  doc.setFillColor(...C.soft); doc.roundedRect(x, y, w, 24, 3, 3, 'F');
-  doc.setFillColor(...col); doc.roundedRect(x, y, 2.5, 24, 1, 1, 'F');
-  doc.setFontSize(7.5); doc.setTextColor(...C.mut); doc.text(label.toUpperCase(), x + 7, y + 8);
-  doc.setFont(undefined, 'bold'); doc.setFontSize(12.5); doc.setTextColor(...col); doc.text(value, x + 7, y + 18);
-  doc.setFont(undefined, 'normal');
-};
-const progress = (doc, x, y, w, pct, col) => {
-  doc.setFillColor(...C.track); doc.roundedRect(x, y, w, 4, 2, 2, 'F');
-  if (pct > 0) { doc.setFillColor(...col); doc.roundedRect(x, y, Math.max(3, w * Math.min(pct, 100) / 100), 4, 2, 2, 'F'); }
-};
-
-async function makePdf() {
-  const { jsPDF } = window.jspdf, doc = new jsPDF();
-  const W = doc.internal.pageSize.getWidth(), t = totals();
-  const cs = DB.list('contributions').sort((a, b) => a.date.localeCompare(b.date));
-  const ex = DB.list('expenses').sort((a, b) => a.date.localeCompare(b.date));
-  let y = 0;
-  const need = h => { if (y + h > 275) { doc.addPage(); y = 22; } };
-
-  // ===== Header band =====
-  doc.setFillColor(...C.sec); doc.rect(0, 0, W, 40, 'F');
-  doc.setFillColor(...C.gold); doc.rect(0, 40, W, 2.5, 'F');
-  const logo = await loadLogo();
-  if (logo) {
-    const h = 26, w = Math.min(h * logo.w / logo.h, 50);
-    doc.setFillColor(255, 255, 255); doc.roundedRect(12, 7, w + 6, h + 0, 4, 4, 'F');
-    doc.addImage(logo.data, 'PNG', 15, 7, w, h);
-  }
-  doc.setTextColor(255, 255, 255); doc.setFont(undefined, 'bold'); doc.setFontSize(20);
-  doc.text('SHRADDHA GROUP', W - 14, 19, { align: 'right' });
-  doc.setFont(undefined, 'normal'); doc.setFontSize(10.5);
-  doc.text('Contribution & Expense Report', W - 14, 27, { align: 'right' });
-  doc.setFontSize(8.5); doc.text('Generated on ' + fdate(today()), W - 14, 34, { align: 'right' });
-  y = 54;
-
-  // ===== Key figures =====
-  const bw = (W - 28 - 12) / 3;
-  statBox(doc, 14, y, bw, 'Total Budget (Collected)', rs(t.collected), C.ok);
-  statBox(doc, 14 + bw + 6, y, bw, 'Total Expenses', rs(t.expenses), C.bad);
-  statBox(doc, 14 + 2 * (bw + 6), y, bw, 'Remaining Money', rs(t.balance), t.balance < 0 ? C.bad : C.pri);
-  y += 32;
-  const spentPct = t.collected ? Math.round(t.expenses / t.collected * 100) : 0;
-  doc.setFontSize(9); doc.setTextColor(...C.mut); doc.text(`Budget used: ${spentPct}%`, 14, y);
-  progress(doc, 45, y - 3.5, W - 59, spentPct, spentPct > 100 ? C.bad : spentPct >= 80 ? C.gold : C.ok);
-  y += 12;
-
-  // ===== Mandatory collection =====
-  const mp = t.expected ? Math.round(t.mandPaid / t.expected * 100) : 0;
-  y = sectionTitle(doc, 'Mandatory Collection', y, C.man) + 6;
-  doc.setFontSize(9); doc.setTextColor(...C.ink);
-  doc.text(`Expected ${rs(t.expected)}   |   Received ${rs(t.mandPaid)}   |   Pending ${rs(t.pending)}   |   ${mp}% collected`, 14, y);
-  progress(doc, 14, y + 4, W - 28, mp, C.man);
-  y += 16;
-
-  // ===== Top contributors (bar chart) =====
-  const byMember = {}; cs.forEach(c => byMember[c.memberId] = (byMember[c.memberId] || 0) + c.amount);
-  const top = Object.entries(byMember).sort((a, b) => b[1] - a[1]).slice(0, 5);
-  if (top.length) {
-    need(15 + top.length * 8);
-    y = sectionTitle(doc, 'Top Contributors', y, C.pri) + 6;
-    top.forEach(([id, amt]) => {
-      doc.setFontSize(9); doc.setTextColor(...C.ink); doc.text(mname(id).slice(0, 24), 14, y + 3);
-      progress(doc, 62, y, W - 62 - 42, amt / top[0][1] * 100, C.pri);
-      doc.text(rs(amt), W - 14, y + 3, { align: 'right' }); y += 8;
-    });
-    y += 6;
-  }
-
-  // ===== Contributions table =====
-  need(40); y = sectionTitle(doc, 'All Contributions', y, C.ok);
-  doc.autoTable({
-    startY: y + 2, margin: { left: 14, right: 14 },
-    head: [['#', 'Date', 'Member', 'Type', 'Amount', 'Notes']],
-    body: cs.length ? cs.map((c, i) => [i + 1, fdate(c.date), mname(c.memberId), c.type === 'mandatory' ? 'Mandatory' : 'Regular', rs(c.amount), c.notes || '']) : [['', 'No contributions yet', '', '', '', '']],
-    foot: [['', '', '', 'TOTAL', rs(sum(cs)), '']],
-    headStyles: { fillColor: C.sec, textColor: 255 }, footStyles: { fillColor: C.gold, textColor: 20, fontStyle: 'bold' },
-    alternateRowStyles: { fillColor: C.soft }, styles: { fontSize: 8.5, cellPadding: 2.5 },
-    columnStyles: { 4: { halign: 'right' } },
-    didParseCell: d => { if (d.section === 'body' && d.column.index === 3) d.cell.styles.textColor = d.cell.raw === 'Mandatory' ? C.man : [7, 89, 133]; }
-  });
-  y = doc.lastAutoTable.finalY + 12;
-
-  // ===== Expenses by category (bar chart) =====
-  const byCat = {}; ex.forEach(e => byCat[e.category] = (byCat[e.category] || 0) + e.amount);
-  const cats = Object.entries(byCat).sort((a, b) => b[1] - a[1]).slice(0, 6);
-  if (cats.length) {
-    need(15 + cats.length * 8);
-    y = sectionTitle(doc, 'Expenses by Category', y, C.bad) + 6;
-    cats.forEach(([name, amt]) => {
-      doc.setFontSize(9); doc.setTextColor(...C.ink); doc.text(name.slice(0, 24), 14, y + 3);
-      progress(doc, 62, y, W - 62 - 42, amt / cats[0][1] * 100, C.bad);
-      doc.text(rs(amt), W - 14, y + 3, { align: 'right' }); y += 8;
-    });
-    y += 6;
-  }
-
-  // ===== Expenses table =====
-  need(40); y = sectionTitle(doc, 'All Expenses', y, C.bad);
-  doc.autoTable({
-    startY: y + 2, margin: { left: 14, right: 14 },
-    head: [['#', 'Date', 'Description', 'Category', 'Vendor / Notes', 'Amount']],
-    body: ex.length ? ex.map((e, i) => [i + 1, fdate(e.date), e.description, e.category, e.vendor || '', rs(e.amount)]) : [['', 'No expenses yet', '', '', '', '']],
-    foot: [['', '', '', '', 'TOTAL', rs(sum(ex))]],
-    headStyles: { fillColor: C.sec, textColor: 255 }, footStyles: { fillColor: C.gold, textColor: 20, fontStyle: 'bold' },
-    alternateRowStyles: { fillColor: C.soft }, styles: { fontSize: 8.5, cellPadding: 2.5 },
-    columnStyles: { 5: { halign: 'right' } }
-  });
-  y = doc.lastAutoTable.finalY + 14;
-
-  // ===== Final summary banner =====
-  need(48);
-  doc.setFillColor(...C.sec); doc.roundedRect(14, y, W - 28, 40, 4, 4, 'F');
-  doc.setFillColor(...C.gold); doc.rect(14, y + 36, W - 28, 4, 'F');
-  doc.setTextColor(255, 255, 255); doc.setFont(undefined, 'bold'); doc.setFontSize(11); doc.text('FINAL SUMMARY', 22, y + 9);
-  doc.setFont(undefined, 'normal'); doc.setFontSize(9.5);
-  doc.text('Total Budget (Collected)', 22, y + 18); doc.text(rs(t.collected), W - 22, y + 18, { align: 'right' });
-  doc.text('Total Expenses', 22, y + 25);          doc.text(rs(t.expenses), W - 22, y + 25, { align: 'right' });
-  doc.setFont(undefined, 'bold'); doc.setFontSize(12); doc.setTextColor(...C.gold);
-  doc.text('REMAINING MONEY', 22, y + 33);         doc.text(rs(t.balance), W - 22, y + 33, { align: 'right' });
-
-  // ===== Footer on every page =====
-  const n = doc.getNumberOfPages();
-  for (let p = 1; p <= n; p++) {
-    doc.setPage(p);
-    if (p > 1) { doc.setFillColor(...C.sec); doc.rect(0, 0, W, 4, 'F'); doc.setFillColor(...C.gold); doc.rect(0, 4, W, 1, 'F'); }
-    doc.setDrawColor(...C.track); doc.line(14, 285, W - 14, 285);
-    doc.setFontSize(8); doc.setTextColor(...C.mut);
-    doc.text('© ' + new Date().getFullYear() + ' Pratik Patil · All rights reserved', 14, 291);
-    doc.text(`Page ${p} of ${n}`, W - 14, 291, { align: 'right' });
-  }
-  doc.save('ganesh-mandal-report.pdf');
-}
-
-PAGES.report = () => {
-  const t = totals();
-  main().innerHTML = head('Download Report', 'One PDF with all contributions, expenses and the remaining balance') +
-    `<div class="grid g4">${card('Total Budget (Collected)', fmt(t.collected), 'up')}${card('Total Expenses', fmt(t.expenses), 'down')}${card('Remaining Money', fmt(t.balance), 'hero')}</div>
-     <div class="card"><button class="btn primary" id="dl">⬇ Download All Contribution List (PDF)</button></div>`;
-  $('#dl').onclick = async () => { try { await makePdf(); toast('PDF downloaded'); } catch (e) { console.error(e); toast('Could not create PDF', 'bad'); } };
-};
+   const rs = n =>
+   'Rs. ' + new Intl.NumberFormat('en-IN').format(n || 0);
+ 
+ const C = {
+   pri:   [128, 32, 32],
+   sec:   [92, 24, 24],
+   gold:  [184, 145, 70],
+   ok:    [40, 90, 60],
+   bad:   [160, 45, 45],
+   ink:   [35, 35, 35],
+   mut:   [90, 90, 90],
+   soft:  [248, 248, 248],
+   track: [215, 215, 215],
+   white: [255, 255, 255]
+ };
+ 
+ // ===== Load Mandal Logo =====
+ const loadLogo = () => new Promise(resolve => {
+   const img = new Image();
+ 
+   img.onload = () => {
+     try {
+       const canvas = document.createElement('canvas');
+       canvas.width = img.naturalWidth || img.width;
+       canvas.height = img.naturalHeight || img.height;
+ 
+       const ctx = canvas.getContext('2d');
+       ctx.drawImage(img, 0, 0);
+ 
+       resolve({
+         data: canvas.toDataURL('image/png'),
+         w: canvas.width,
+         h: canvas.height
+       });
+     } catch (error) {
+       console.warn('Could not process mandal logo:', error);
+       resolve(null);
+     }
+   };
+ 
+   img.onerror = () => resolve(null);
+   img.src = 'images/mandal-logo.png';
+ });
+ 
+ // ===== Section Heading =====
+ const sectionTitle = (doc, text, y, color = C.pri) => {
+   doc.setFillColor(...color);
+   doc.roundedRect(14, y - 5, 2.5, 7, 0.8, 0.8, 'F');
+ 
+   doc.setFont('helvetica', 'bold');
+   doc.setFontSize(11);
+   doc.setTextColor(...C.ink);
+   doc.text(text, 20, y);
+ 
+   doc.setFont('helvetica', 'normal');
+   return y + 5;
+ };
+ 
+ // ===== Financial Summary Table Style =====
+ const formalTableStyles = {
+   theme: 'grid',
+   margin: { left: 14, right: 14 },
+   styles: {
+     font: 'helvetica',
+     fontSize: 8,
+     cellPadding: 3,
+     textColor: C.ink,
+     lineColor: [205, 205, 205],
+     lineWidth: 0.15,
+     valign: 'middle',
+     overflow: 'linebreak'
+   },
+   headStyles: {
+     fillColor: C.sec,
+     textColor: C.white,
+     fontStyle: 'bold',
+     halign: 'center',
+     fontSize: 8
+   },
+   footStyles: {
+     fillColor: [238, 238, 238],
+     textColor: C.ink,
+     fontStyle: 'bold'
+   },
+   alternateRowStyles: {
+     fillColor: C.soft
+   },
+   showHead: 'everyPage'
+ };
+ 
+ // ===== Create PDF =====
+ async function makePdf() {
+   const { jsPDF } = window.jspdf;
+   const doc = new jsPDF({
+     orientation: 'portrait',
+     unit: 'mm',
+     format: 'a4'
+   });
+ 
+   const W = doc.internal.pageSize.getWidth();
+   const H = doc.internal.pageSize.getHeight();
+   const t = totals();
+ 
+   const cs = DB.list('contributions')
+     .slice()
+     .sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+ 
+   const ex = DB.list('expenses')
+     .slice()
+     .sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+ 
+   const generatedDate = fdate(today());
+ 
+   let y = 0;
+ 
+   // Add a page when the next section will not fit.
+   const need = h => {
+     if (y + h > 274) {
+       doc.addPage();
+       y = 22;
+     }
+   };
+ 
+   // ===== Formal Letterhead =====
+   doc.setFillColor(...C.white);
+   doc.rect(0, 0, W, 43, 'F');
+ 
+   const logo = await loadLogo();
+ 
+   if (logo) {
+     const maxW = 27;
+     const maxH = 27;
+     const scale = Math.min(
+       maxW / logo.w,
+       maxH / logo.h
+     );
+ 
+     const logoW = logo.w * scale;
+     const logoH = logo.h * scale;
+ 
+     doc.addImage(
+       logo.data,
+       'PNG',
+       14,
+       5,
+       logoW,
+       logoH
+     );
+   }
+ 
+   doc.setTextColor(...C.ink);
+   doc.setFont('helvetica', 'bold');
+   doc.setFontSize(15);
+ 
+   doc.text('SHRADDHA GROUP', W / 2, 12, {
+     align: 'center'
+   });
+ 
+   doc.setFontSize(10);
+   doc.text('CONTRIBUTION AND EXPENDITURE STATEMENT',
+     W / 2, 20, {
+       align: 'center'
+     }
+   );
+ 
+   doc.setFont('helvetica', 'normal');
+   doc.setFontSize(8);
+ 
+   doc.text('Financial Records and Account Summary',
+     W / 2, 26, {
+       align: 'center'
+     }
+   );
+ 
+   doc.setDrawColor(...C.sec);
+   doc.setLineWidth(0.6);
+   doc.line(14, 33, W - 14, 33);
+ 
+   doc.setDrawColor(...C.gold);
+   doc.setLineWidth(0.25);
+   doc.line(14, 35, W - 14, 35);
+ 
+   doc.setFontSize(8);
+   doc.setTextColor(...C.mut);
+ 
+   doc.text('Report Date: ' + generatedDate, 14, 41);
+ 
+   doc.text('Currency: INR (Rs.)', W - 14, 41, {
+     align: 'right'
+   });
+ 
+   y = 51;
+ 
+   // ===== Financial Overview =====
+   y = sectionTitle(
+     doc,
+     '1. FINANCIAL OVERVIEW',
+     y,
+     C.pri
+   ) + 2;
+ 
+   doc.autoTable({
+     ...formalTableStyles,
+     startY: y,
+ 
+     head: [[
+       'Financial Particulars',
+       'Amount (Rs.)'
+     ]],
+ 
+     body: [
+       ['Total Contributions Received', rs(t.collected)],
+       ['Total Expenditure Incurred', rs(t.expenses)],
+       ['Closing Balance', rs(t.balance)]
+     ],
+ 
+     columnStyles: {
+       0: { cellWidth: 115 },
+       1: { halign: 'right' }
+     },
+ 
+     didParseCell: data => {
+       if (
+         data.section === 'body' &&
+         data.row.index === 2
+       ) {
+         data.cell.styles.fontStyle = 'bold';
+         data.cell.styles.fillColor = [240, 240, 240];
+       }
+     }
+   });
+ 
+   y = doc.lastAutoTable.finalY + 12;
+ 
+   // ===== Top Contributors =====
+   const byMember = {};
+ 
+   cs.forEach(c => {
+     const id = c.memberId;
+     byMember[id] =
+       (byMember[id] || 0) + Number(c.amount || 0);
+   });
+ 
+   const top = Object.entries(byMember)
+     .sort((a, b) => b[1] - a[1])
+     .slice(0, 5);
+ 
+   if (top.length) {
+     need(25 + top.length * 7);
+ 
+     y = sectionTitle(
+       doc,
+       '2. CONTRIBUTION SUMMARY',
+       y,
+       C.pri
+     ) + 2;
+ 
+     doc.autoTable({
+       ...formalTableStyles,
+       startY: y,
+ 
+       head: [[
+         'Sr. No.',
+         'Contributor Name',
+         'Contribution Amount (Rs.)'
+       ]],
+ 
+       body: top.map(([id, amount], i) => [
+         i + 1,
+         String(mname(id) || 'Unknown'),
+         rs(amount)
+       ]),
+ 
+       columnStyles: {
+         0: { cellWidth: 18, halign: 'center' },
+         1: { cellWidth: 95 },
+         2: { halign: 'right' }
+       }
+     });
+ 
+     y = doc.lastAutoTable.finalY + 12;
+   }
+ 
+   // ===== Detailed Contributions =====
+   need(30);
+ 
+   y = sectionTitle(
+     doc,
+     '3. REGISTER OF CONTRIBUTIONS',
+     y,
+     C.ok
+   ) + 2;
+ 
+   doc.autoTable({
+     ...formalTableStyles,
+     startY: y,
+ 
+     head: [[
+       'Sr.',
+       'Date',
+       'Member Name',
+       'Type',
+       'Amount (Rs.)',
+       'Remarks'
+     ]],
+ 
+     body: cs.length
+       ? cs.map((c, i) => [
+           i + 1,
+           c.date ? fdate(c.date) : '-',
+           String(mname(c.memberId) || 'Unknown'),
+           c.type === 'mandatory'
+             ? 'Mandatory'
+             : 'Regular',
+           rs(c.amount),
+           c.notes || '-'
+         ])
+       : [[
+           '',
+           '',
+           'No contribution records available',
+           '',
+           '',
+           ''
+         ]],
+ 
+     foot: [[
+       '',
+       '',
+       '',
+       'TOTAL',
+       rs(sum(cs)),
+       ''
+     ]],
+ 
+     columnStyles: {
+       0: { cellWidth: 9, halign: 'center' },
+       1: { cellWidth: 23 },
+       2: { cellWidth: 43 },
+       3: { cellWidth: 21 },
+       4: { cellWidth: 29, halign: 'right' },
+       5: { cellWidth: 'auto' }
+     },
+ 
+     styles: {
+       ...formalTableStyles.styles,
+       fontSize: 7,
+       cellPadding: 2.5
+     },
+ 
+     didParseCell: data => {
+       if (
+         data.section === 'body' &&
+         data.column.index === 3
+       ) {
+         data.cell.styles.textColor =
+           data.cell.raw === 'Mandatory'
+             ? C.pri
+             : C.ink;
+       }
+     }
+   });
+ 
+   y = doc.lastAutoTable.finalY + 12;
+ 
+   // ===== Expense Category Summary =====
+   const byCat = {};
+ 
+   ex.forEach(e => {
+     const category = e.category || 'Uncategorized';
+ 
+     byCat[category] =
+       (byCat[category] || 0) + Number(e.amount || 0);
+   });
+ 
+   const cats = Object.entries(byCat)
+     .sort((a, b) => b[1] - a[1]);
+ 
+   if (cats.length) {
+     need(25);
+ 
+     y = sectionTitle(
+       doc,
+       '4. EXPENDITURE BY CATEGORY',
+       y,
+       C.pri
+     ) + 2;
+ 
+     doc.autoTable({
+       ...formalTableStyles,
+       startY: y,
+ 
+       head: [[
+         'Sr. No.',
+         'Expense Category',
+         'Amount (Rs.)'
+       ]],
+ 
+       body: cats.map(([name, amount], i) => [
+         i + 1,
+         String(name),
+         rs(amount)
+       ]),
+ 
+       foot: [[
+         '',
+         'TOTAL EXPENDITURE',
+         rs(sum(ex))
+       ]],
+ 
+       columnStyles: {
+         0: { cellWidth: 18, halign: 'center' },
+         1: { cellWidth: 100 },
+         2: { halign: 'right' }
+       }
+     });
+ 
+     y = doc.lastAutoTable.finalY + 12;
+   }
+ 
+   // ===== Detailed Expenses =====
+   need(30);
+ 
+   y = sectionTitle(
+     doc,
+     '5. REGISTER OF EXPENDITURE',
+     y,
+     C.pri
+   ) + 2;
+ 
+   doc.autoTable({
+     ...formalTableStyles,
+     startY: y,
+ 
+     head: [[
+       'Sr.',
+       'Date',
+       'Description',
+       'Category',
+       'Vendor / Remarks',
+       'Amount (Rs.)'
+     ]],
+ 
+     body: ex.length
+       ? ex.map((e, i) => [
+           i + 1,
+           e.date ? fdate(e.date) : '-',
+           e.description || '-',
+           e.category || '-',
+           e.vendor || '-',
+           rs(e.amount)
+         ])
+       : [[
+           '',
+           '',
+           'No expense records available',
+           '',
+           '',
+           ''
+         ]],
+ 
+     foot: [[
+       '',
+       '',
+       '',
+       '',
+       'TOTAL',
+       rs(sum(ex))
+     ]],
+ 
+     columnStyles: {
+       0: { cellWidth: 9, halign: 'center' },
+       1: { cellWidth: 23 },
+       2: { cellWidth: 40 },
+       3: { cellWidth: 28 },
+       4: { cellWidth: 40 },
+       5: { cellWidth: 'auto', halign: 'right' }
+     },
+ 
+     styles: {
+       ...formalTableStyles.styles,
+       fontSize: 7,
+       cellPadding: 2.5
+     }
+   });
+ 
+   y = doc.lastAutoTable.finalY + 12;
+ 
+   // ===== Final Summary and Verification =====
+   // Keep the summary and signature fields together.
+   need(85);
+ 
+   y = sectionTitle(
+     doc,
+     '6. FINAL STATEMENT',
+     y,
+     C.pri
+   ) + 2;
+ 
+   doc.autoTable({
+     ...formalTableStyles,
+     startY: y,
+ 
+     head: [[
+       'Particulars',
+       'Amount (Rs.)'
+     ]],
+ 
+     body: [
+       ['Total Contributions Received', rs(t.collected)],
+       ['Total Expenditure Incurred', rs(t.expenses)],
+       ['Closing Balance', rs(t.balance)]
+     ],
+ 
+     columnStyles: {
+       0: { cellWidth: 115 },
+       1: { halign: 'right' }
+     },
+ 
+     didParseCell: data => {
+       if (
+         data.section === 'body' &&
+         data.row.index === 2
+       ) {
+         data.cell.styles.fontStyle = 'bold';
+         data.cell.styles.fillColor = [240, 240, 240];
+       }
+     }
+   });
+ 
+   y = doc.lastAutoTable.finalY + 8;
+ 
+   doc.setFont('helvetica', 'normal');
+   doc.setFontSize(8);
+   doc.setTextColor(...C.ink);
+ 
+   const declaration =
+     'This statement has been prepared from the financial records ' +
+     'maintained by the organization. The particulars and amounts ' +
+     'should be verified against the original records and supporting documents.';
+ 
+   const declarationLines = doc.splitTextToSize(
+     declaration,
+     W - 28
+   );
+ 
+   doc.text(declarationLines, 14, y);
+ 
+   y += declarationLines.length * 4 + 19;
+ 
+   // Move signatures to a new page if necessary.
+   if (y + 18 > 274) {
+     doc.addPage();
+     y = 35;
+   }
+ 
+   const sigGap = 6;
+   const sigW = (W - 28 - sigGap * 2) / 3;
+ 
+   const signatories = [
+     'Prepared By',
+     'Verified By',
+     'Authorized Signatory'
+   ];
+ 
+   signatories.forEach((label, i) => {
+     const x = 14 + i * (sigW + sigGap);
+ 
+     doc.setDrawColor(100, 100, 100);
+     doc.setLineWidth(0.25);
+     doc.line(x, y, x + sigW, y);
+ 
+     doc.setFont('helvetica', 'bold');
+     doc.setFontSize(8);
+     doc.setTextColor(...C.ink);
+ 
+     doc.text(label, x + sigW / 2, y + 5, {
+       align: 'center'
+     });
+ 
+     doc.setFont('helvetica', 'normal');
+     doc.setFontSize(7.5);
+     doc.setTextColor(...C.mut);
+ 
+     doc.text('Name: __________________', x, y + 12);
+   });
+ 
+   // ===== Page Headers and Footers =====
+   const pageCount = doc.getNumberOfPages();
+ 
+   for (let p = 1; p <= pageCount; p++) {
+     doc.setPage(p);
+ 
+     // Simple continuation-page header.
+     if (p > 1) {
+       doc.setFillColor(...C.sec);
+       doc.rect(0, 0, W, 3, 'F');
+ 
+       doc.setFont('helvetica', 'bold');
+       doc.setFontSize(8);
+       doc.setTextColor(...C.ink);
+ 
+       doc.text(
+         'SHRADDHA GROUP - FINANCIAL STATEMENT',
+         14,
+         11
+       );
+ 
+       doc.setFont('helvetica', 'normal');
+       doc.setFontSize(7);
+       doc.setTextColor(...C.mut);
+ 
+       doc.text(
+         'Report Date: ' + generatedDate,
+         W - 14,
+         11,
+         { align: 'right' }
+       );
+     }
+ 
+     doc.setDrawColor(190, 190, 190);
+     doc.setLineWidth(0.2);
+     doc.line(14, 285, W - 14, 285);
+ 
+     doc.setFont('helvetica', 'normal');
+     doc.setFontSize(7.5);
+     doc.setTextColor(...C.mut);
+ 
+     doc.text(
+       'SHRADDHA GROUP | Financial Records',
+       14,
+       291
+     );
+ 
+     doc.text(
+       'System-generated report',
+       W / 2,
+       291,
+       { align: 'center' }
+     );
+ 
+     doc.text(
+       `Page ${p} of ${pageCount}`,
+       W - 14,
+       291,
+       { align: 'right' }
+     );
+   }
+ 
+   // Download the PDF.
+   doc.save('ganesh-mandal-financial-report.pdf');
+ }
+ 
+ // ===== Report Page UI =====
+ PAGES.report = () => {
+   const t = totals();
+ 
+   main().innerHTML =
+     head(
+       'Financial Report',
+       'Generate a formal PDF statement of contributions, expenses and closing balance.'
+     ) +
+ 
+     `<div class="grid g4">
+       ${card('Total Contributions', fmt(t.collected), 'up')}
+       ${card('Total Expenses', fmt(t.expenses), 'down')}
+       ${card('Closing Balance', fmt(t.balance), 'hero')}
+     </div>
+ 
+     <div class="card">
+       <h3>Financial Statement</h3>
+       <p style="color:var(--muted)">
+         Includes contribution records, expenditure records,
+         financial totals and verification fields.
+       </p>
+       <button class="btn primary" id="dl">
+         Download Financial Report (PDF)
+       </button>
+     </div>`;
+ 
+   $('#dl').onclick = async () => {
+     const btn = $('#dl');
+ 
+     try {
+       btn.disabled = true;
+       btn.textContent = 'Generating PDF...';
+ 
+       await makePdf();
+ 
+       toast('Financial report downloaded');
+     } catch (error) {
+       console.error('PDF generation failed:', error);
+       toast('Could not create PDF', 'bad');
+     } finally {
+       btn.disabled = false;
+       btn.textContent = 'Download Financial Report (PDF)';
+     }
+   };
+ };
+ 
