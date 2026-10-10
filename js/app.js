@@ -19,7 +19,8 @@ const confirmDel=(title,msg,fn)=>modal(title,`<p>${msg}</p><p>This action cannot
 const field=(label,name,input)=>`<div class="f"><label for="${name}">${label}</label>${input}<span class="err" data-err="${name}"></span></div>`;
 const showErrors=(root,errs)=>{$$('[data-err]',root).forEach(e=>e.textContent=errs[e.dataset.err]||'');return Object.keys(errs).length===0};
 const avatar=m=>m.photo?`<img class="av" src="${m.photo}" alt="">`:`<span class="av" aria-hidden="true">${esc((m.name||'?').split(/\s+/).map(w=>w[0]).slice(0,2).join('').toUpperCase())}</span>`;
-const NAV=[['index.html','📊 Dashboard','dashboard'],['members.html','👥 Members','members'],['add-contribution.html','➕ Add Contribution','add'],['mandatory.html','🎯 Mandatory Contributions','mandatory'],['contributions.html','💰 All Contributions','contributions'],['expenses.html','🧾 Expenses','expenses']];
+const NAV=[['index.html','📊 Dashboard','dashboard'],['members.html','👥 Members','members'],['add-contribution.html','➕ Add Contribution','add'],['mandatory.html','🎯 Mandatory Contributions','mandatory'],['contributions.html','💰 All Contributions','contributions'],['expenses.html','🧾 Expenses','expenses'],
+['reports.html','📄 Download Report','report']];
 
 function layout() {
   const page = document.body.dataset.page;
